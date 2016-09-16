@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component-configuration
+    xmlns="http://tis.co.jp/nablarch/component-configuration">
+  <import file="db-default.xml" />
+
+  <!-- SimpleDbTransactionManager -->
+  <component name="transaction"
+    class="nablarch.core.db.transaction.SimpleDbTransactionManager">
+  </component>
+
+  <component name="dbStore" class="nablarch.common.web.session.store.DbStore">
+    <property name="expires" value="1800" />
+    <property name="dbManager">
+      <component class="nablarch.core.db.transaction.SimpleDbTransactionManager">
+      </component>
+    </property>
+    <property name="userSessionSchema">
+      <component class="nablarch.common.web.session.store.UserSessionSchema">
+        <property name="tableName" value="USER_SESSION" />
+        <property name="sessionIdName" value="SESSION_ID" />
+        <property name="sessionObjectName" value="SESSION_OBJECT" />
+        <property name="expirationDatetimeName" value="EXPIRATION_DATETIME" />
+      </component>
+    </property>
+  </component>
+
+  <component name="changeSchema" class="nablarch.common.web.session.store.DbStore">
+    <property name="expires" value="1800" />
+    <property name="dbManager">
+      <component class="nablarch.core.db.transaction.SimpleDbTransactionManager">
+      </component>
+    </property>
+    <property name="userSessionSchema">
+      <component class="nablarch.common.web.session.store.UserSessionSchema">
+        <property name="tableName" value="USER_SESSION_DB" />
+        <property name="sessionIdName" value="SESSION_ID_COL" />
+        <property name="sessionObjectName" value="SESSION_OBJECT_COL" />
+        <property name="expirationDatetimeName" value="EXPIRATION_DATETIME_COL" />
+      </component>
+    </property>
+  </component>
+
+  <component name="systemTimeProvider" class="nablarch.core.date.BasicSystemTimeProvider" />
+
+  <component name="statementFactory"
+    class="nablarch.core.db.statement.BasicStatementFactory" />
+
+</component-configuration>
