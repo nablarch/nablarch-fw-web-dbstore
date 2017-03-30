@@ -20,7 +20,7 @@ apply plugin: 'com.nablarch.dev.nablarch-sonarqube'
 apply plugin: 'com.nablarch.dev.nablarch-version'
 apply plugin: 'idea'
 apply plugin: 'eclipse'
-apply plugin: 'cobertura'
+apply from: 'https://github.com/nablarch/nablarch-gradle-plugin/blob/develop/scripts/cobertura/cobertura-0.0.1.gradle?raw=true'
 
 // ビルド時のJavaバージョンを指定する
 sourceCompatibility=JavaVersion.VERSION_1_6
@@ -37,11 +37,7 @@ dependencies {
   testCompile 'org.jmockit:jmockit:1.18'
   testCompile 'junit:junit:4.12'
   testCompile 'org.hamcrest:hamcrest-all:1.3'
-  testCompile 'com.nablarch.dev:nablarch-test-support:0.0.5'
-  testCompile 'com.oracle:ucp:11.2.0.3.0'
-  testCompile 'com.oracle:ojdbc6:11.2.0.2.0'
 
-  testRuntime 'org.slf4j:slf4j-nop:1.7.12' // for cobertura
 }
 
 test {
@@ -53,52 +49,6 @@ test {
   )
 
   ignoreFailures = true
-
-  doFirst {
-    def logDir = new File('log')
-    if (!logDir.exists()) {
-      assert logDir.mkdirs()
-    }
-  }
-
-  cobertura {
-    coverageSourceDirs = ["${projectDir}/src/main/java/"]
-    coverageIgnoreTrivial = true
-    coverageFormats = ['xml']
-    coverageDirs = [project.sourceSets.main.output.classesDir]
-    auxiliaryClasspath = files('src/main/resources') + configurations.testRuntime.asFileTree
-  }
-}
-
-def coberturaReportDir = new File(project.buildDir, "cobertura-report")
-
-task generateCoberturaReportByAnt(dependsOn: 'cobertura') {
-  def dataFile = "${project.buildDir}/cobertura/cobertura.ser"
-
-  inputs.file file(dataFile)
-  outputs.dir coberturaReportDir
-
-  doLast {
-    ant {
-      taskdef(resource: 'tasks.properties', classpath: configurations.cobertura.asPath + ':' + configurations.testRuntime.asPath)
-
-      'cobertura-report'(
-          destdir: coberturaReportDir,
-          datafile: dataFile,
-          srcdir: "${projectDir}/src/main/java/",
-          format: 'xml'
-      )
-    }
-  }
-}
-
-task coverage(dependsOn: ['clean', 'generateCoberturaReportByAnt'])
-
-sonarRunner {
-  sonarProperties {
-    property "sonar.java.coveragePlugin", "cobertura"
-    property "sonar.cobertura.reportPath", "${coberturaReportDir}/coverage.xml"
-  }
 }
 
 tasks.sonarRunner {
@@ -106,6 +56,6 @@ tasks.sonarRunner {
 }
 
 task wrapper(type: Wrapper) {
-  gradleVersion = '2.12'
+  gradleVersion = '2.13'
 }
 
