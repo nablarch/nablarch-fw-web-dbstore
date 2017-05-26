@@ -335,11 +335,11 @@ public class DbStoreTest {
         sut.setStateEncoder(new JavaSerializeStateEncoder());
         sut.initialize();
 
-        final ExecutorService executorService = Executors.newFixedThreadPool(10);
+        final ExecutorService executorService = Executors.newFixedThreadPool(20);
 
         try {
-            List<Future<Object>> futures = new ArrayList<Future<java.lang.Object>>(10);
-            for (int i = 0; i < 10; i++) {
+            List<Future<Object>> futures = new ArrayList<Future<java.lang.Object>>(20);
+            for (int i = 0; i < 20; i++) {
                 futures.add(executorService.submit(new Runnable() {
                     @Override
                     public void run() {
