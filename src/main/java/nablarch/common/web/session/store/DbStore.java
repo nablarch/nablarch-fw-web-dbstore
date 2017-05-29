@@ -40,6 +40,9 @@ public class DbStore extends SessionStore implements Initializable {
 
     /** ユーザセッションテーブルを追加するSQL */
     private String insertUserSessionSql;
+    
+    /** ユーザセッションテーブルを更新するSQL */
+    private String updateUserSessionSql;
 
     /** ユーザセッションテーブルを削除するSQL */
     private String deleteUserSessionSql;
@@ -96,22 +99,18 @@ public class DbStore extends SessionStore implements Initializable {
     /**
      * ユーザセッションテーブルにセッション情報を保存する。
      * <p>
-     * 既にユーザセッションテーブルにセッションIDのレコードが保存されていた場合は、
-     * そのレコードを削除後に保存処理を行う。
-     * <p>
      * 新規でセッション情報を保存する場合で複数スレッドから同時に本処理が呼び出された場合、
      * 登録処理(insert)が同時実行され片方の処理が一意制約違反となる。
      * このため、一意制約違反が発生した場合には、1回だけリトライを実施する。
-     * リトライ時には、既にレコードが存在しているため、削除処理(delete処理)で排他ロックがかかるため一意制約違反が発生することはない。
      */
     @Override
     public void save(final String sessionId, final List<SessionEntry> entries,
                        ExecutionContext executionContext) {
         try {
-            deleteAndInsert(sessionId, entries);
+            saveSession(sessionId, entries);
         } catch (DuplicateStatementException e) {
             // 一意制約違反発生時には、一度だけリトライを行う。
-            deleteAndInsert(sessionId, entries);
+            saveSession(sessionId, entries);
         }
     }
 
@@ -134,22 +133,48 @@ public class DbStore extends SessionStore implements Initializable {
     /**
      * ユーザセッションテーブルにセッション情報を登録する。
      * <p>
-     * 既にセッションIDに紐づくセッション情報が登録されている場合には、削除後に登録処理を行う。
+     * 保存対象のセッション情報が空の場合は、テーブルからレコードを削除する。
+     * それ以外の場合は、更新処理を行う。更新対象が存在しない場合には、新規にセッションが追加された場合なので、レコードの追加を行う。
      *
      * @param sessionId セッションID
      * @param entries セッションに保存する情報
      */
-    private void deleteAndInsert(final String sessionId, final List<SessionEntry> entries) {
+    private void saveSession(final String sessionId, final List<SessionEntry> entries) {
         new SimpleDbTransactionExecutor<Void>(dbManager) {
             @Override
             public Void execute(AppDbConnection connection) {
-                deleteUserSession(sessionId, connection);
-                if (entries != null && !entries.isEmpty()) {
-                    insertUserSession(sessionId, entries, connection);
+                // セッションが空の場合は削除のみ
+                if (entries == null || entries.isEmpty()) {
+                    deleteUserSession(sessionId, connection);
+                    return null;
                 }
+
+                // 更新処理を行い更新対象がない場合は登録処理を行う
+                final int count = updateUserSession(sessionId, entries, connection);
+                if (count == 0) {
+                    insertUserSession(sessionId, entries, connection);
+                } 
                 return null;
             }
         }.doTransaction();
+    }
+
+    /**
+     * ユーザセッションを更新する。
+     * @param sessionId セッションID
+     * @param entries セッションエントリ
+     * @param connection {@link AppDbConnection}
+     * @return 更新件数
+     */
+    private int updateUserSession(final String sessionId, final List<SessionEntry> entries,
+            final AppDbConnection connection) {
+        final SqlPStatement update = connection.prepareStatement(updateUserSessionSql);
+        update.setBytes(1, encode(entries));
+        update.setTimestamp(2, new Timestamp(SystemTimeUtil.getTimestamp().getTime()
+                + getExpiresMilliSeconds()));
+        update.setString(3, sessionId);
+
+        return update.executeUpdate();
     }
 
     /**
@@ -211,6 +236,11 @@ public class DbStore extends SessionStore implements Initializable {
         deleteUserSessionSql = "DELETE FROM "
                 + userSessionSchema.getTableName() + " WHERE "
                 + userSessionSchema.getSessionIdName() + " = ?";
+        
+        updateUserSessionSql = "UPDATE " + userSessionSchema.getTableName()
+                + " SET " + userSessionSchema.getSessionObjectName() + "=?,"
+                + userSessionSchema.getExpirationDatetimeName() + "=?"
+                + " WHERE " + userSessionSchema.getSessionIdName() + " = ?";
 
     }
 }
