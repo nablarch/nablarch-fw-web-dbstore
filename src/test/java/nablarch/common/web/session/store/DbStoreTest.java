@@ -41,8 +41,8 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import mockit.Expectations;
 import mockit.Mocked;
-import mockit.NonStrictExpectations;
 
 /**
  * {@link DbStore}のテスト。
@@ -223,11 +223,14 @@ public class DbStoreTest {
      */
     @Test
     public void testTimeOverUserSession() throws Exception {
-        new NonStrictExpectations() {{
+        new Expectations() {{
             final Timestamp timestamp = Timestamp.valueOf("2015-03-18 16:21:00");
             mockSystemTimeProvider.getDate();
+            minTimes = 0;
             result = new Date(timestamp.getTime());
+            
             mockSystemTimeProvider.getTimestamp();
+            minTimes = 0;
             result = timestamp;
         }};
         DbStore store = repositoryResource.getComponent("dbStore");
