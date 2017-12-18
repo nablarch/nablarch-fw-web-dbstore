@@ -84,7 +84,8 @@ public class DbStoreTest {
         List<SessionEntry> inEntries = Arrays.asList(
                 new SessionEntry("key1", "val1", store),
                 new SessionEntry("key2", "val2", store),
-                new SessionEntry("key3", "val3", store));
+                new SessionEntry("key3", "val3", store),
+                new SessionEntry("key4", "\uD83C\uDF63\uD83C\uDF63", store));
 
         ExecutionContext unusedCtx = null;
         store.save(unusedId, inEntries, unusedCtx);
@@ -92,15 +93,13 @@ public class DbStoreTest {
         // load処理
         List<SessionEntry> outEntries1 = store.load(unusedId, unusedCtx);
 
-        assertThat(outEntries1.size(), is(3));
+        assertThat(outEntries1.size(), is(4));
 
-        Collections.sort(outEntries1, keySort);
-        int i = 1;
-        for (SessionEntry outEntry : outEntries1) {
-            int num = i++;
-            assertThat(outEntry.getKey(), is("key" + num));
-            assertThat(outEntry.getValue()
-                    .toString(), is("val" + num));
+        for (int i = 0; i < outEntries1.size(); i++) {
+            final SessionEntry outEntry = outEntries1.get(i);
+            final SessionEntry inEntry = inEntries.get(i);
+            assertThat(outEntry.getKey(), is(inEntry.getKey()));
+            assertThat(outEntry.getValue().toString(), is(inEntry.getValue()));
         }
 
         // エントリが空の時、ユーザセッションテーブル deleteだけされることの確認（ユーザセッションテーブルがロードされない）
@@ -156,7 +155,7 @@ public class DbStoreTest {
                 new SessionEntry("key4", "val4", store),
                 new SessionEntry("key5", "val5", store),
                 new SessionEntry("key6", "val6", store),
-                new SessionEntry("key7", "val7", store));
+                new SessionEntry("key7", "[\uD840\uDC0B\uD840\uDC0B]", store));
 
         ExecutionContext unusedCtx = new ExecutionContext();
         store.save(unusedId, inEntries, unusedCtx);
@@ -165,13 +164,11 @@ public class DbStoreTest {
         List<SessionEntry> outEntries = store.load(unusedId, unusedCtx);
 
         assertThat(outEntries.size(), is(4));
-        Collections.sort(outEntries, keySort);
-        int j = 4;
-        for (SessionEntry outEntry : outEntries) {
-            int num = j++;
-            assertThat(outEntry.getKey(), is("key" + num));
-            assertThat(outEntry.getValue()
-                    .toString(), is("val" + num));
+        for (int i = 0; i < outEntries.size(); i++) {
+            final SessionEntry outEntry = outEntries.get(i);
+            final SessionEntry inEntry = inEntries.get(i);
+            assertThat(outEntry.getKey(), is(inEntry.getKey()));
+            assertThat(outEntry.getValue().toString(), is(inEntry.getValue()));
         }
     }
 
@@ -191,7 +188,7 @@ public class DbStoreTest {
                 new SessionEntry("key4", "val4", store),
                 new SessionEntry("key5", "val5", store),
                 new SessionEntry("key6", "val6", store),
-                new SessionEntry("key7", "val7", store));
+                new SessionEntry("key7", "\uD844\uDE3D\uD844\uDE3D", store));
 
         ExecutionContext unusedCtx = new ExecutionContext();
         store.save(unusedId, inEntries, unusedCtx);
@@ -207,13 +204,11 @@ public class DbStoreTest {
         List<SessionEntry> outEntries = store.load(unusedId, unusedCtx);
 
         assertThat(outEntries.size(), is(4));
-        Collections.sort(outEntries, keySort);
-        int j = 4;
-        for (SessionEntry outEntry : outEntries) {
-            int num = j++;
-            assertThat(outEntry.getKey(), is("key" + num));
-            assertThat(outEntry.getValue()
-                    .toString(), is("val" + num));
+        for (int i = 0; i < outEntries.size(); i++) {
+            final SessionEntry outEntry = outEntries.get(i);
+            final SessionEntry inEntry = inEntries.get(i);
+            assertThat(outEntry.getKey(), is(inEntry.getKey()));
+            assertThat(outEntry.getValue().toString(), is(inEntry.getValue()));
         }
     }
 
