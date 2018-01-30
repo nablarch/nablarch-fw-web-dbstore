@@ -6,7 +6,7 @@
 
   <groupId>com.nablarch.framework</groupId>
   <artifactId>nablarch-fw-web-dbstore</artifactId>
-  <version>1.0.4</version>
+  <version>1.1.0-SNAPSHOT</version>
 
   <scm>
     <connection>scm:git:git://github.com/nablarch/${project.artifactId}.git</connection>
