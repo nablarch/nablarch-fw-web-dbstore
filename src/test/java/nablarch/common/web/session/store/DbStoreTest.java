@@ -1,14 +1,22 @@
 package nablarch.common.web.session.store;
 
-import static org.hamcrest.CoreMatchers.allOf;
-import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.CoreMatchers.nullValue;
-import static org.hamcrest.beans.HasPropertyWithValue.hasProperty;
-import static org.hamcrest.collection.IsIterableContainingInOrder.contains;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
+import mockit.Expectations;
+import mockit.Mocked;
+import nablarch.common.web.session.SessionEntry;
+import nablarch.common.web.session.SessionExpirationException;
+import nablarch.common.web.session.encoder.JavaSerializeStateEncoder;
+import nablarch.core.date.SystemTimeProvider;
+import nablarch.core.date.SystemTimeUtil;
+import nablarch.core.util.StringUtil;
+import nablarch.fw.ExecutionContext;
+import nablarch.test.support.SystemRepositoryResource;
+import nablarch.test.support.db.helper.DatabaseTestRunner;
+import nablarch.test.support.db.helper.VariousDbTestHelper;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.ClassRule;
+import org.junit.Test;
+import org.junit.runner.RunWith;
 
 import java.nio.charset.Charset;
 import java.security.MessageDigest;
@@ -25,24 +33,17 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
-import nablarch.common.web.session.SessionEntry;
-import nablarch.common.web.session.encoder.JavaSerializeStateEncoder;
-import nablarch.core.date.SystemTimeProvider;
-import nablarch.core.date.SystemTimeUtil;
-import nablarch.core.util.StringUtil;
-import nablarch.fw.ExecutionContext;
-import nablarch.test.support.SystemRepositoryResource;
-import nablarch.test.support.db.helper.DatabaseTestRunner;
-import nablarch.test.support.db.helper.VariousDbTestHelper;
-
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-
-import mockit.Expectations;
-import mockit.Mocked;
+import static org.hamcrest.CoreMatchers.allOf;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.nullValue;
+import static org.hamcrest.beans.HasPropertyWithValue.hasProperty;
+import static org.hamcrest.collection.IsIterableContainingInOrder.contains;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 /**
  * {@link DbStore}のテスト。
@@ -260,10 +261,21 @@ public class DbStoreTest {
                 .getTime() - 10);
         VariousDbTestHelper.update(userSession);
 
-        /* 期限切れなのでロードされない */
-        List<SessionEntry> outEntries2 = store.load(unusedId, unusedCtx);
-        assertTrue(outEntries2.isEmpty());
-
+        /* 期限切れの場合Exceptionがthrowされる */
+        try {
+            List<SessionEntry> outEntries2 = store.load(unusedId, unusedCtx);
+            fail();
+        } catch (SessionExpirationException expected) {
+            // 期限切れでもエントリはExceptionに保持される
+            List<SessionEntry> outEntries = expected.getSessionEntries();
+            assertThat(outEntries.size(), is(3));
+            for (int i = 0; i < outEntries.size(); i++) {
+                final SessionEntry outEntry = outEntries.get(i);
+                final SessionEntry inEntry = inEntries.get(i);
+                assertThat(outEntry.getKey(), is(inEntry.getKey()));
+                assertThat(outEntry.getValue().toString(), is(inEntry.getValue()));
+            }
+        }
     }
 
     /**

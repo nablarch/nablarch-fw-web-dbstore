@@ -5,6 +5,7 @@ import java.util.Collections;
 import java.util.List;
 
 import nablarch.common.web.session.SessionEntry;
+import nablarch.common.web.session.SessionExpirationException;
 import nablarch.common.web.session.SessionStore;
 import nablarch.core.date.SystemTimeUtil;
 import nablarch.core.db.connection.AppDbConnection;
@@ -74,26 +75,48 @@ public class DbStore extends SessionStore implements Initializable {
 
     @Override
     public List<SessionEntry> load(final String sessionId,
-            ExecutionContext executionContext) {
-        return new SimpleDbTransactionExecutor<List<SessionEntry>>(dbManager) {
+                                   ExecutionContext executionContext) {
+        DbSession session = new SimpleDbTransactionExecutor<DbSession>(dbManager) {
             @Override
-            public List<SessionEntry> execute(AppDbConnection connection) {
-                // ユーザセッションテーブルをロードする
+            public DbSession execute(AppDbConnection connection) {
+                // ユーザセッションテーブルをロードする(有効期限は見ない）
                 SqlPStatement prepared = connection
                         .prepareStatement(selectUserSessionSql);
                 prepared.setString(1, sessionId);
-                prepared.setTimestamp(2, new Timestamp(SystemTimeUtil
-                        .getTimestamp().getTime()));
-                
+
                 ResultSetIterator iterator = prepared.executeQuery();
                 if (iterator.next()) {
-                    return decode(iterator.getBytes(1));
+                    return new DbSession(
+                            decode(iterator.getBytes(1))
+                            , iterator.getTimestamp(2).getTime());
                 } else {
-                    return Collections.emptyList();
+                    return new DbSession();
                 }
             }
         }.doTransaction();
+        if (0 < session.expirationTime
+                && session.expirationTime < SystemTimeUtil.getTimestamp().getTime()) {
+            throw new SessionExpirationException(session.entries, session.expirationTime, getExpiresMilliSeconds());
+        }
+        return session.entries;
+    }
 
+    /**
+     * DBストアに格納されたセッション
+     */
+    private static final class DbSession {
+        List<SessionEntry> entries;
+        long expirationTime;
+
+        public DbSession(List<SessionEntry> entries, long expirationTime) {
+            this.entries = entries;
+            this.expirationTime = expirationTime;
+        }
+
+        public DbSession() {
+            this.entries = Collections.emptyList();
+            this.expirationTime = -1L;
+        }
     }
 
     /**
@@ -222,9 +245,9 @@ public class DbStore extends SessionStore implements Initializable {
 
         // SQL文を初期化する。
         selectUserSessionSql = "SELECT " + userSessionSchema.getSessionObjectName()
+                + "," + userSessionSchema.getExpirationDatetimeName()
                 + " FROM " + userSessionSchema.getTableName() + " " + " WHERE "
-                + userSessionSchema.getSessionIdName() + " = ? " + " AND "
-                + userSessionSchema.getExpirationDatetimeName() + " >= ?";
+                + userSessionSchema.getSessionIdName() + " = ? ";
 
         insertUserSessionSql = "INSERT INTO "
                 + userSessionSchema.getTableName() + " ( "
