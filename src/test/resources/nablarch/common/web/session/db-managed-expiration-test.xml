@@ -21,4 +21,13 @@
       </component>
     </property>
   </component>
+  
+  <component name="initializer" class="nablarch.core.repository.initialization.BasicApplicationInitializer">
+    <property name="initializeList">
+      <list>
+        <component-ref name="expiration"/>
+        <component-ref name="anotherSchema"/>
+      </list>
+    </property>
+  </component>
 </component-configuration>

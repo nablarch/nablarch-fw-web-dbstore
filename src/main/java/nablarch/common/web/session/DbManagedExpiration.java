@@ -78,6 +78,7 @@ public class DbManagedExpiration implements Expiration, Initializable {
                 // 更新処理を行い更新対象がない場合は登録処理を行う
                 int count = updateSessionExpiration(sessionId, expirationDateTime, connection);
                 if (count == 0) {
+                    // 主キーとなるセッションIDはUUIDV4で払い出すため一意制約違反となることは考慮不要
                     insertSessionExpiration(sessionId, expirationDateTime, connection);
                 }
                 return null;
