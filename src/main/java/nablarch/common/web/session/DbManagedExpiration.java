@@ -54,7 +54,7 @@ public class DbManagedExpiration implements Expiration, Initializable {
         SqlResultSet sessionRecords = new SimpleDbTransactionExecutor<SqlResultSet>(dbManager) {
             @Override
             public SqlResultSet execute(AppDbConnection connection) {
-                // 有効期限テーブルをロードする
+                // 有効期限を取得する
                 SqlPStatement prepared = connection
                         .prepareStatement(selectUserSessionSql);
                 prepared.setString(1, sessionID);
