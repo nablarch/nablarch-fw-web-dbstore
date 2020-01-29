@@ -1,2 +1,4 @@
 nablarch.common.web.session.store.UserSession
 nablarch.common.web.session.store.ChangeUserSession
+nablarch.common.web.session.SessionExpiration
+nablarch.common.web.session.DbExpiration

@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component-configuration
+    xmlns="http://tis.co.jp/nablarch/component-configuration">
+  <import file="db-default.xml"/>
+
+  <component name="expiration" class="nablarch.common.web.session.DbManagedExpiration" autowireType="None">
+    <property name="dbManager">
+      <component class="nablarch.core.db.transaction.SimpleDbTransactionManager"/>
+    </property>
+  </component>
+
+  <component name="anotherSchema" class="nablarch.common.web.session.DbManagedExpiration" autowireType="None">
+    <property name="dbManager">
+      <component class="nablarch.core.db.transaction.SimpleDbTransactionManager"/>
+    </property>
+    <property name="sessionExpirationSchema">
+      <component class="nablarch.common.web.session.SessionExpirationSchema">
+        <property name="tableName" value="DB_EXPIRATION"/>
+        <property name="sessionIdName" value="SESSION_ID_COL"/>
+        <property name="expirationDatetimeName" value="EXPIRATION_DATETIME_COL"/>
+      </component>
+    </property>
+  </component>
+</component-configuration>
