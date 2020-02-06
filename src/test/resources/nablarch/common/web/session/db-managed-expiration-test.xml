@@ -13,15 +13,15 @@
     <property name="dbManager">
       <component class="nablarch.core.db.transaction.SimpleDbTransactionManager"/>
     </property>
-    <property name="sessionExpirationSchema">
-      <component class="nablarch.common.web.session.SessionExpirationSchema">
+    <property name="userSessionSchema">
+      <component class="nablarch.common.web.session.store.UserSessionSchema">
         <property name="tableName" value="DB_EXPIRATION"/>
         <property name="sessionIdName" value="SESSION_ID_COL"/>
         <property name="expirationDatetimeName" value="EXPIRATION_DATETIME_COL"/>
       </component>
     </property>
   </component>
-  
+
   <component name="initializer" class="nablarch.core.repository.initialization.BasicApplicationInitializer">
     <property name="initializeList">
       <list>
