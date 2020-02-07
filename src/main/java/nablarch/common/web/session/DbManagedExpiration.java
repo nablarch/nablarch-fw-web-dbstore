@@ -32,6 +32,8 @@ public class DbManagedExpiration implements Expiration, Initializable {
     /** 有効期限を更新するSQL */
     private String updateUserSessionSql;
 
+    private String countUserSessionSql;
+
     /**
      * DbManagerのインスタンスをセットする。
      *
@@ -51,14 +53,14 @@ public class DbManagedExpiration implements Expiration, Initializable {
     }
 
     @Override
-    public boolean isExpired(final String sessionID, long currentDateTime, ExecutionContext context) {
+    public boolean isExpired(final String sessionId, long currentDateTime, ExecutionContext context) {
         SqlResultSet sessionRecords = new SimpleDbTransactionExecutor<SqlResultSet>(dbManager) {
             @Override
             public SqlResultSet execute(AppDbConnection connection) {
                 // 有効期限を取得する
                 SqlPStatement prepared = connection
                         .prepareStatement(selectUserSessionSql);
-                prepared.setString(1, sessionID);
+                prepared.setString(1, sessionId);
                 return prepared.retrieve();
             }
         }.doTransaction();
@@ -83,6 +85,20 @@ public class DbManagedExpiration implements Expiration, Initializable {
                     insertSessionExpiration(sessionId, expirationDateTime, connection);
                 }
                 return null;
+            }
+        }.doTransaction();
+    }
+
+    @Override
+    public boolean isDeterminable(final String sessionId, ExecutionContext context) {
+        return new SimpleDbTransactionExecutor<Boolean>(dbManager) {
+            @Override
+            public Boolean execute(AppDbConnection connection) {
+                // 有効期限を取得する
+                SqlPStatement prepared = connection
+                        .prepareStatement(countUserSessionSql);
+                prepared.setString(1, sessionId);
+                return prepared.retrieve().get(0).getInteger("COUNT") > 0;
             }
         }.doTransaction();
     }
@@ -130,8 +146,11 @@ public class DbManagedExpiration implements Expiration, Initializable {
 
         // SQL文を初期化する。
         selectUserSessionSql = "SELECT " + userSessionSchema.getExpirationDatetimeName()
-                + " FROM " + userSessionSchema.getTableName() + " " + " WHERE "
+                + " FROM " + userSessionSchema.getTableName() + " WHERE "
                 + userSessionSchema.getSessionIdName() + " = ? ";
+
+        countUserSessionSql = "SELECT COUNT(" + userSessionSchema.getExpirationDatetimeName() + ") AS COUNT"
+                + " FROM (" + selectUserSessionSql + ")";
 
         insertUserSessionSql = "INSERT INTO "
                 + userSessionSchema.getTableName() + " ( "
