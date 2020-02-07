@@ -20,7 +20,7 @@ public class DbManagedExpiration implements Expiration, Initializable {
     /** SimpleDbTransactionManagerのインスタンス */
     private SimpleDbTransactionManager dbManager;
 
-    /** 有効期限テーブルのスキーマ */
+    /** ユーザセッションテーブルのスキーマ */
     private UserSessionSchema userSessionSchema;
 
     /** 有効期限を取得するSQL */
@@ -42,9 +42,9 @@ public class DbManagedExpiration implements Expiration, Initializable {
     }
 
     /**
-     * 有効期限テーブルのスキーマをセットする。
+     * ユーザセッションテーブルのスキーマをセットする。
      *
-     * @param userSessionSchema 有効期限テーブルのスキーマ
+     * @param userSessionSchema ユーザセッションテーブルのスキーマ
      */
     public void setUserSessionSchema(UserSessionSchema userSessionSchema) {
         this.userSessionSchema = userSessionSchema;
@@ -121,7 +121,7 @@ public class DbManagedExpiration implements Expiration, Initializable {
     @Override
     public void initialize() {
         if (userSessionSchema == null) {
-            // デフォルトの有効期限スキーマをセットする
+            // デフォルトのユーザセッションスキーマをセットする
             userSessionSchema = new UserSessionSchema();
             userSessionSchema.setTableName("USER_SESSION");
             userSessionSchema.setSessionIdName("SESSION_ID");

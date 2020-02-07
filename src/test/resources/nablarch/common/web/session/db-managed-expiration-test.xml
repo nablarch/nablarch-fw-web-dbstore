@@ -15,7 +15,7 @@
     </property>
     <property name="userSessionSchema">
       <component class="nablarch.common.web.session.store.UserSessionSchema">
-        <property name="tableName" value="DB_EXPIRATION"/>
+        <property name="tableName" value="USER_SESSION_DB"/>
         <property name="sessionIdName" value="SESSION_ID_COL"/>
         <property name="expirationDatetimeName" value="EXPIRATION_DATETIME_COL"/>
       </component>

@@ -1,5 +1,6 @@
 package nablarch.common.web.session;
 
+import nablarch.common.web.session.store.ChangeUserSession;
 import nablarch.common.web.session.store.UserSession;
 import nablarch.fw.ExecutionContext;
 import nablarch.test.support.SystemRepositoryResource;
@@ -70,8 +71,8 @@ public class DbManagedExpirationTest {
      */
     @Test
     public void testIsExpiredCurrentTimeEqualsExpirationByAnotherSchema() {
-        VariousDbTestHelper.createTable(DbExpiration.class);
-        VariousDbTestHelper.setUpTable(new DbExpiration(SESSION_ID, BASE_TIMESTAMP));
+        VariousDbTestHelper.createTable(ChangeUserSession.class);
+        VariousDbTestHelper.setUpTable(new ChangeUserSession(SESSION_ID, null, BASE_TIMESTAMP));
 
         DbManagedExpiration expiration = repositoryResource.getComponent(ANOTHER_SCHEMA_COMPONENT);
         assertFalse(expiration.isExpired(SESSION_ID, 0, unused));
@@ -115,14 +116,14 @@ public class DbManagedExpirationTest {
      */
     @Test
     public void testSaveExpirationDateTimeInsertByAnotherSchema() {
-        VariousDbTestHelper.createTable(DbExpiration.class);
+        VariousDbTestHelper.createTable(ChangeUserSession.class);
         VariousDbTestHelper.setUpTable(
-                new DbExpiration("sessionId1", new Timestamp(100)),
-                new DbExpiration("sessionId2", new Timestamp(2000))
+                new ChangeUserSession("sessionId1", null, new Timestamp(100)),
+                new ChangeUserSession("sessionId2", null, new Timestamp(2000))
         );
         DbManagedExpiration expiration = repositoryResource.getComponent(ANOTHER_SCHEMA_COMPONENT);
         expiration.saveExpirationDateTime(SESSION_ID, 0, unused);
-        DbExpiration saved = VariousDbTestHelper.findById(DbExpiration.class, SESSION_ID);
+        ChangeUserSession saved = VariousDbTestHelper.findById(ChangeUserSession.class, SESSION_ID);
         assertNotNull(saved);
         assertThat(saved.sessionId, is(SESSION_ID));
         assertThat(saved.expirationDatetime, is(BASE_TIMESTAMP));
