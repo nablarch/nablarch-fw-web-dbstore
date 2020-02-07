@@ -32,7 +32,11 @@ public class DbManagedExpiration implements Expiration, Initializable {
     /** 有効期限を更新するSQL */
     private String updateUserSessionSql;
 
+    /** 有効期限の件数を取得するSQL */
     private String countUserSessionSql;
+
+    /** 有効期限の件数エイリアス **/
+    private static final String COUNT = "COUNT_";
 
     /**
      * DbManagerのインスタンスをセットする。
@@ -98,7 +102,7 @@ public class DbManagedExpiration implements Expiration, Initializable {
                 SqlPStatement prepared = connection
                         .prepareStatement(countUserSessionSql);
                 prepared.setString(1, sessionId);
-                return prepared.retrieve().get(0).getInteger("COUNT") > 0;
+                return prepared.retrieve().get(0).getInteger(COUNT) > 0;
             }
         }.doTransaction();
     }
@@ -149,7 +153,7 @@ public class DbManagedExpiration implements Expiration, Initializable {
                 + " FROM " + userSessionSchema.getTableName() + " WHERE "
                 + userSessionSchema.getSessionIdName() + " = ? ";
 
-        countUserSessionSql = "SELECT COUNT(" + userSessionSchema.getExpirationDatetimeName() + ") AS COUNT"
+        countUserSessionSql = "SELECT COUNT(" + userSessionSchema.getExpirationDatetimeName() + ") AS " + COUNT
                 + " FROM (" + selectUserSessionSql + ")";
 
         insertUserSessionSql = "INSERT INTO "
