@@ -1,5 +1,6 @@
 package nablarch.common.web.session;
 
+import nablarch.common.web.session.store.UserSessionSchema;
 import nablarch.core.db.connection.AppDbConnection;
 import nablarch.core.db.statement.SqlPStatement;
 import nablarch.core.db.statement.SqlResultSet;
@@ -19,8 +20,8 @@ public class DbManagedExpiration implements Expiration, Initializable {
     /** SimpleDbTransactionManagerのインスタンス */
     private SimpleDbTransactionManager dbManager;
 
-    /** 有効期限テーブルのスキーマ */
-    private SessionExpirationSchema sessionExpirationSchema;
+    /** ユーザセッションテーブルのスキーマ */
+    private UserSessionSchema userSessionSchema;
 
     /** 有効期限を取得するSQL */
     private String selectUserSessionSql;
@@ -30,6 +31,12 @@ public class DbManagedExpiration implements Expiration, Initializable {
 
     /** 有効期限を更新するSQL */
     private String updateUserSessionSql;
+
+    /** 有効期限の件数を取得するSQL */
+    private String countUserSessionSql;
+
+    /** 有効期限の件数エイリアス **/
+    private static final String COUNT = "COUNT_";
 
     /**
      * DbManagerのインスタンスをセットする。
@@ -41,23 +48,23 @@ public class DbManagedExpiration implements Expiration, Initializable {
     }
 
     /**
-     * 有効期限テーブルのスキーマをセットする。
+     * ユーザセッションテーブルのスキーマをセットする。
      *
-     * @param sessionExpirationSchema 有効期限テーブルのスキーマ
+     * @param userSessionSchema ユーザセッションテーブルのスキーマ
      */
-    public void setSessionExpirationSchema(SessionExpirationSchema sessionExpirationSchema) {
-        this.sessionExpirationSchema = sessionExpirationSchema;
+    public void setUserSessionSchema(UserSessionSchema userSessionSchema) {
+        this.userSessionSchema = userSessionSchema;
     }
 
     @Override
-    public boolean isExpired(final String sessionID, long currentDateTime, ExecutionContext context) {
+    public boolean isExpired(final String sessionId, long currentDateTime, ExecutionContext context) {
         SqlResultSet sessionRecords = new SimpleDbTransactionExecutor<SqlResultSet>(dbManager) {
             @Override
             public SqlResultSet execute(AppDbConnection connection) {
                 // 有効期限を取得する
                 SqlPStatement prepared = connection
                         .prepareStatement(selectUserSessionSql);
-                prepared.setString(1, sessionID);
+                prepared.setString(1, sessionId);
                 return prepared.retrieve();
             }
         }.doTransaction();
@@ -66,7 +73,7 @@ public class DbManagedExpiration implements Expiration, Initializable {
             return true;
         }
         long expiration = sessionRecords.get(0)
-                .getTimestamp(sessionExpirationSchema.getExpirationDatetimeName()).getTime();
+                .getTimestamp(userSessionSchema.getExpirationDatetimeName()).getTime();
         return expiration < currentDateTime;
     }
 
@@ -82,6 +89,20 @@ public class DbManagedExpiration implements Expiration, Initializable {
                     insertSessionExpiration(sessionId, expirationDateTime, connection);
                 }
                 return null;
+            }
+        }.doTransaction();
+    }
+
+    @Override
+    public boolean isDeterminable(final String sessionId, ExecutionContext context) {
+        return new SimpleDbTransactionExecutor<Boolean>(dbManager) {
+            @Override
+            public Boolean execute(AppDbConnection connection) {
+                // 有効期限を取得する
+                SqlPStatement prepared = connection
+                        .prepareStatement(countUserSessionSql);
+                prepared.setString(1, sessionId);
+                return prepared.retrieve().get(0).getInteger(COUNT) > 0;
             }
         }.doTransaction();
     }
@@ -119,27 +140,30 @@ public class DbManagedExpiration implements Expiration, Initializable {
 
     @Override
     public void initialize() {
-        if (sessionExpirationSchema == null) {
-            // デフォルトの有効期限スキーマをセットする
-            sessionExpirationSchema = new SessionExpirationSchema();
-            sessionExpirationSchema.setTableName("SESSION_EXPIRATION");
-            sessionExpirationSchema.setSessionIdName("SESSION_ID");
-            sessionExpirationSchema.setExpirationDatetimeName("EXPIRATION_DATETIME");
+        if (userSessionSchema == null) {
+            // デフォルトのユーザセッションスキーマをセットする
+            userSessionSchema = new UserSessionSchema();
+            userSessionSchema.setTableName("USER_SESSION");
+            userSessionSchema.setSessionIdName("SESSION_ID");
+            userSessionSchema.setExpirationDatetimeName("EXPIRATION_DATETIME");
         }
 
         // SQL文を初期化する。
-        selectUserSessionSql = "SELECT " + sessionExpirationSchema.getExpirationDatetimeName()
-                + " FROM " + sessionExpirationSchema.getTableName() + " " + " WHERE "
-                + sessionExpirationSchema.getSessionIdName() + " = ? ";
+        selectUserSessionSql = "SELECT " + userSessionSchema.getExpirationDatetimeName()
+                + " FROM " + userSessionSchema.getTableName() + " WHERE "
+                + userSessionSchema.getSessionIdName() + " = ? ";
+
+        countUserSessionSql = "SELECT COUNT(" + userSessionSchema.getExpirationDatetimeName() + ") AS " + COUNT
+                + " FROM (" + selectUserSessionSql + ")";
 
         insertUserSessionSql = "INSERT INTO "
-                + sessionExpirationSchema.getTableName() + " ( "
-                + sessionExpirationSchema.getSessionIdName() + ", "
-                + sessionExpirationSchema.getExpirationDatetimeName()
+                + userSessionSchema.getTableName() + " ( "
+                + userSessionSchema.getSessionIdName() + ", "
+                + userSessionSchema.getExpirationDatetimeName()
                 + ") VALUES (?,?)";
 
-        updateUserSessionSql = "UPDATE " + sessionExpirationSchema.getTableName()
-                + " SET " + sessionExpirationSchema.getExpirationDatetimeName() + "=?"
-                + " WHERE " + sessionExpirationSchema.getSessionIdName() + " = ?";
+        updateUserSessionSql = "UPDATE " + userSessionSchema.getTableName()
+                + " SET " + userSessionSchema.getExpirationDatetimeName() + "=?"
+                + " WHERE " + userSessionSchema.getSessionIdName() + " = ?";
     }
 }

@@ -1,5 +1,6 @@
 package nablarch.common.web.session;
 
+import nablarch.common.web.session.store.ChangeUserSession;
 import nablarch.common.web.session.store.UserSession;
 import nablarch.fw.ExecutionContext;
 import nablarch.test.support.SystemRepositoryResource;
@@ -46,8 +47,7 @@ public class DbManagedExpirationTest {
      */
     @Test
     public void testIsExpiredCurrentTimeLaterThanExpiration() {
-        VariousDbTestHelper.createTable(SessionExpiration.class);
-        VariousDbTestHelper.setUpTable(new SessionExpiration(SESSION_ID, BASE_TIMESTAMP));
+        VariousDbTestHelper.setUpTable(new UserSession(SESSION_ID, null, BASE_TIMESTAMP));
 
         DbManagedExpiration expiration = repositoryResource.getComponent(DEFAULT_SCHEMA_COMPONENT);
         assertTrue(expiration.isExpired(SESSION_ID, 1000, unused));
@@ -59,8 +59,7 @@ public class DbManagedExpirationTest {
      */
     @Test
     public void testIsExpiredCurrentTimeEarlierThanExpiration() {
-        VariousDbTestHelper.createTable(SessionExpiration.class);
-        VariousDbTestHelper.setUpTable(new SessionExpiration(SESSION_ID, BASE_TIMESTAMP));
+        VariousDbTestHelper.setUpTable(new UserSession(SESSION_ID, null, BASE_TIMESTAMP));
 
         DbManagedExpiration expiration = repositoryResource.getComponent(DEFAULT_SCHEMA_COMPONENT);
         assertFalse(expiration.isExpired(SESSION_ID, -1000, unused));
@@ -72,8 +71,8 @@ public class DbManagedExpirationTest {
      */
     @Test
     public void testIsExpiredCurrentTimeEqualsExpirationByAnotherSchema() {
-        VariousDbTestHelper.createTable(DbExpiration.class);
-        VariousDbTestHelper.setUpTable(new DbExpiration(SESSION_ID, BASE_TIMESTAMP));
+        VariousDbTestHelper.createTable(ChangeUserSession.class);
+        VariousDbTestHelper.setUpTable(new ChangeUserSession(SESSION_ID, null, BASE_TIMESTAMP));
 
         DbManagedExpiration expiration = repositoryResource.getComponent(ANOTHER_SCHEMA_COMPONENT);
         assertFalse(expiration.isExpired(SESSION_ID, 0, unused));
@@ -84,7 +83,6 @@ public class DbManagedExpirationTest {
      */
     @Test
     public void testIsExpiredForEmptyTable() {
-        VariousDbTestHelper.createTable(SessionExpiration.class);
         DbManagedExpiration expiration = repositoryResource.getComponent(DEFAULT_SCHEMA_COMPONENT);
         assertTrue(expiration.isExpired(SESSION_ID, 0, unused));
     }
@@ -94,8 +92,7 @@ public class DbManagedExpirationTest {
      */
     @Test
     public void testIsExpiredForSessionIdNotFound() {
-        VariousDbTestHelper.createTable(SessionExpiration.class);
-        VariousDbTestHelper.setUpTable(new SessionExpiration("sessionId1", BASE_TIMESTAMP));
+        VariousDbTestHelper.setUpTable(new UserSession("sessionId1", null, BASE_TIMESTAMP));
         DbManagedExpiration expiration = repositoryResource.getComponent(DEFAULT_SCHEMA_COMPONENT);
         assertTrue(expiration.isExpired("sessionId2", 0, unused));
     }
@@ -105,10 +102,9 @@ public class DbManagedExpirationTest {
      */
     @Test
     public void testSaveExpirationDateTimeInsert() {
-        VariousDbTestHelper.createTable(SessionExpiration.class);
         DbManagedExpiration expiration = repositoryResource.getComponent(DEFAULT_SCHEMA_COMPONENT);
         expiration.saveExpirationDateTime(SESSION_ID, 0, unused);
-        SessionExpiration saved = VariousDbTestHelper.findById(SessionExpiration.class, SESSION_ID);
+        UserSession saved = VariousDbTestHelper.findById(UserSession.class, SESSION_ID);
         assertNotNull(saved);
         assertThat(saved.sessionId, is(SESSION_ID));
         assertThat(saved.expirationDatetime, is(BASE_TIMESTAMP));
@@ -120,14 +116,14 @@ public class DbManagedExpirationTest {
      */
     @Test
     public void testSaveExpirationDateTimeInsertByAnotherSchema() {
-        VariousDbTestHelper.createTable(DbExpiration.class);
+        VariousDbTestHelper.createTable(ChangeUserSession.class);
         VariousDbTestHelper.setUpTable(
-                new DbExpiration("sessionId1", new Timestamp(100)),
-                new DbExpiration("sessionId2", new Timestamp(2000))
+                new ChangeUserSession("sessionId1", null, new Timestamp(100)),
+                new ChangeUserSession("sessionId2", null, new Timestamp(2000))
         );
         DbManagedExpiration expiration = repositoryResource.getComponent(ANOTHER_SCHEMA_COMPONENT);
         expiration.saveExpirationDateTime(SESSION_ID, 0, unused);
-        DbExpiration saved = VariousDbTestHelper.findById(DbExpiration.class, SESSION_ID);
+        ChangeUserSession saved = VariousDbTestHelper.findById(ChangeUserSession.class, SESSION_ID);
         assertNotNull(saved);
         assertThat(saved.sessionId, is(SESSION_ID));
         assertThat(saved.expirationDatetime, is(BASE_TIMESTAMP));
@@ -138,13 +134,42 @@ public class DbManagedExpirationTest {
      */
     @Test
     public void testSaveExpirationDateTimeUpdate() {
-        VariousDbTestHelper.createTable(SessionExpiration.class);
-        VariousDbTestHelper.setUpTable(new SessionExpiration(SESSION_ID, BASE_TIMESTAMP));
+        VariousDbTestHelper.setUpTable(new UserSession(SESSION_ID, null, BASE_TIMESTAMP));
         DbManagedExpiration expiration = repositoryResource.getComponent(DEFAULT_SCHEMA_COMPONENT);
         expiration.saveExpirationDateTime(SESSION_ID, 1000, unused);
-        SessionExpiration saved = VariousDbTestHelper.findById(SessionExpiration.class, SESSION_ID);
+        UserSession saved = VariousDbTestHelper.findById(UserSession.class, SESSION_ID);
         assertNotNull(saved);
         assertThat(saved.sessionId, is(SESSION_ID));
         assertThat(saved.expirationDatetime, is(new Timestamp(1000)));
+    }
+
+    /**
+     * トークンテーブルにレコードが見つかった場合、有効期限判定可能と判定されること。
+     */
+    @Test
+    public void testIsDeterminable() {
+        VariousDbTestHelper.setUpTable(new UserSession(SESSION_ID, null, BASE_TIMESTAMP));
+
+        DbManagedExpiration expiration = repositoryResource.getComponent(DEFAULT_SCHEMA_COMPONENT);
+        assertTrue(expiration.isDeterminable(SESSION_ID, unused));
+    }
+
+    /**
+     * トークンテーブルが空の場合、有効期限判定不能と判定されること。
+     */
+    @Test
+    public void testIsDeterminableForEmptyTable() {
+        DbManagedExpiration expiration = repositoryResource.getComponent(DEFAULT_SCHEMA_COMPONENT);
+        assertFalse(expiration.isDeterminable(SESSION_ID, unused));
+    }
+
+    /**
+     * トークンテーブルにレコードが見つからない場合、有効期限判定不能と判定されること。
+     */
+    @Test
+    public void testIsDeterminableForSessionIdNotFound() {
+        VariousDbTestHelper.setUpTable(new UserSession("sessionId1", null, BASE_TIMESTAMP));
+        DbManagedExpiration expiration = repositoryResource.getComponent(DEFAULT_SCHEMA_COMPONENT);
+        assertFalse(expiration.isDeterminable(SESSION_ID, unused));
     }
 }
