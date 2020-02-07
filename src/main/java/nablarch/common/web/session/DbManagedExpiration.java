@@ -153,8 +153,8 @@ public class DbManagedExpiration implements Expiration, Initializable {
                 + " FROM " + userSessionSchema.getTableName() + " WHERE "
                 + userSessionSchema.getSessionIdName() + " = ? ";
 
-        countUserSessionSql = "SELECT COUNT(" + userSessionSchema.getExpirationDatetimeName() + ") AS " + COUNT
-                + " FROM (" + selectUserSessionSql + ")";
+        countUserSessionSql = "SELECT COUNT(" + userSessionSchema.getExpirationDatetimeName() + ") " + COUNT
+                + " FROM (" + selectUserSessionSql + ") SUB_";
 
         insertUserSessionSql = "INSERT INTO "
                 + userSessionSchema.getTableName() + " ( "
