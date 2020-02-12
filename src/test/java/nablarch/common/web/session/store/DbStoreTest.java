@@ -1,30 +1,7 @@
 package nablarch.common.web.session.store;
 
-import static org.hamcrest.CoreMatchers.allOf;
-import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.CoreMatchers.nullValue;
-import static org.hamcrest.beans.HasPropertyWithValue.hasProperty;
-import static org.hamcrest.collection.IsIterableContainingInOrder.contains;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
-
-import java.nio.charset.Charset;
-import java.security.MessageDigest;
-import java.sql.Timestamp;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.Date;
-import java.util.List;
-import java.util.UUID;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
-
+import mockit.Expectations;
+import mockit.Mocked;
 import nablarch.common.web.session.SessionEntry;
 import nablarch.common.web.session.encoder.JavaSerializeStateEncoder;
 import nablarch.core.date.SystemTimeProvider;
@@ -34,15 +11,35 @@ import nablarch.fw.ExecutionContext;
 import nablarch.test.support.SystemRepositoryResource;
 import nablarch.test.support.db.helper.DatabaseTestRunner;
 import nablarch.test.support.db.helper.VariousDbTestHelper;
-
 import org.junit.After;
 import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-import mockit.Expectations;
-import mockit.Mocked;
+import java.nio.charset.Charset;
+import java.security.MessageDigest;
+import java.sql.Timestamp;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.Date;
+import java.util.List;
+import java.util.UUID;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+
+import static org.hamcrest.CoreMatchers.allOf;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.nullValue;
+import static org.hamcrest.beans.HasPropertyWithValue.hasProperty;
+import static org.hamcrest.collection.IsIterableContainingInOrder.contains;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
 
 /**
  * {@link DbStore}のテスト。
@@ -136,6 +133,23 @@ public class DbStoreTest {
         List<SessionEntry> outEntries3 = store.load(unusedId, unusedCtx);
 
         assertTrue(outEntries3.isEmpty());
+    }
+
+    /**
+     * セッションオブジェクトがNULLの時、空Listがロードされることの確認。
+     * DB管理の有効期限を使用した場合にセッションオブジェクトがNULLになり得る。
+     */
+    @Test
+    public void testNullSessionObject() throws Exception {
+        DbStore store = repositoryResource.getComponent("dbStore");
+        store.setStateEncoder(new JavaSerializeStateEncoder());
+        store.initialize();
+        String unusedId = createSessionId();
+
+        VariousDbTestHelper.setUpTable(new UserSession(unusedId, null, Timestamp.valueOf("2020-02-12 15:00:00")));
+
+        List<SessionEntry> outEntries1 = store.load(unusedId, null);
+        assertTrue(outEntries1.isEmpty());
     }
 
     /**
