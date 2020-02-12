@@ -87,7 +87,10 @@ public class DbStore extends SessionStore implements Initializable {
                 
                 ResultSetIterator iterator = prepared.executeQuery();
                 if (iterator.next()) {
-                    return decode(iterator.getBytes(1));
+                    byte[] sessionObject = iterator.getBytes(1);
+                    return sessionObject == null ?
+                            Collections.<SessionEntry>emptyList()
+                            : decode(sessionObject);
                 } else {
                     return Collections.emptyList();
                 }
