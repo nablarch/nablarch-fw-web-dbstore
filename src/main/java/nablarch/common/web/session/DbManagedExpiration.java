@@ -69,7 +69,7 @@ public class DbManagedExpiration implements Expiration, Initializable {
             }
         }.doTransaction();
 
-        if (sessionRecords == null || sessionRecords.isEmpty()) {
+        if (sessionRecords.isEmpty()) {
             return true;
         }
         long expiration = sessionRecords.get(0)
