@@ -1,7 +1,5 @@
 package nablarch.common.web.session.store;
 
-import mockit.Expectations;
-import mockit.Mocked;
 import nablarch.common.web.session.SessionEntry;
 import nablarch.common.web.session.encoder.JavaSerializeStateEncoder;
 import nablarch.core.date.SystemTimeProvider;
@@ -40,6 +38,8 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
  * {@link DbStore}のテスト。
@@ -62,8 +62,7 @@ public class DbStoreTest {
     public void tearDown() throws Exception {
     }
 
-    @Mocked
-    private SystemTimeProvider mockSystemTimeProvider;
+    private final SystemTimeProvider mockSystemTimeProvider = mock(SystemTimeProvider.class);
 
     /**
      * 基本シナリオの確認。
@@ -232,16 +231,10 @@ public class DbStoreTest {
      */
     @Test
     public void testTimeOverUserSession() throws Exception {
-        new Expectations() {{
-            final Timestamp timestamp = Timestamp.valueOf("2015-03-18 16:21:00");
-            mockSystemTimeProvider.getDate();
-            minTimes = 0;
-            result = new Date(timestamp.getTime());
-            
-            mockSystemTimeProvider.getTimestamp();
-            minTimes = 0;
-            result = timestamp;
-        }};
+        final Timestamp timestamp = Timestamp.valueOf("2015-03-18 16:21:00");
+        when(mockSystemTimeProvider.getDate()).thenReturn(new Date(timestamp.getTime()));
+        when(mockSystemTimeProvider.getTimestamp()).thenReturn(timestamp);
+        
         DbStore store = repositoryResource.getComponent("dbStore");
         store.setStateEncoder(new JavaSerializeStateEncoder());
         store.initialize();
